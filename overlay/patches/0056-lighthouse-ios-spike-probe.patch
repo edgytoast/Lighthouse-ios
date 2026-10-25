@@ -1,7 +1,9 @@
 Overlay patch 0056 (D36): SPIKE ATTRIBUTION PROBE. Port of Shipwright-ios
 0066 (D-085) via Starship-ios 0042, onto Lighthouse's render loop
 (GameEngine::RunCommands draws the 2D frame itself -- there is no
-Fast3dWindow::DrawAndRunGraphicsCommands call on this port, D14) and its LUS
+Fast3dWindow::DrawAndRunGraphicsCommands call on this port, D14; since
+Lighthouse 1.2.0 the loop is FramePacing.cpp's DrawSubframe/PresentSubframe,
+D40) and its LUS
 fork (src/fast, src/ship, the same layout as the Ship of Harkinian port). The SoH-only
 seams (actor/object/room spawn, the GetPixelDepth readback and its pipeline --
 BK never calls GetPixelDepth, D37) are dropped; the texture-upload ledger stays
@@ -646,13 +648,12 @@ scripts/lh_genlib.py against each file's state just before this patch.
      replacements.clear();
  
      if (!gRenderShould) {
---- a/src/port/Engine.cpp
-+++ b/src/port/Engine.cpp
-@@ -500,6 +500,15 @@
-     Ship::Switch::Exit();
- #endif
- }
-+
+--- a/src/port/Interpolation/FramePacing.cpp
++++ b/src/port/Interpolation/FramePacing.cpp
+@@ -16,6 +16,14 @@
+ #include "port/Enhancements/Events/Hooks/Events.h"
+ #include "port/Nametag/Nametag.h"
+ #include "port/OS/OS.h"
 +#ifdef __IOS__
 +// LIGHTHOUSE_IOS (overlay 0056, D36): spike probe entry points
 +// (src/port/SohIosSpike.cpp).
@@ -661,10 +662,40 @@ scripts/lh_genlib.py against each file's state just before this patch.
 +extern "C" void SohIos_SpkMark(int which);
 +extern "C" void SohIos_SpkFrameEnd(void);
 +#endif
+ #include "port/Patches/Patches.h"
+ #include "port/UI/cvar_prefixes.h"
  
- void GameEngine::StartFrame() const {
-     using Ship::KbScancode;
-@@ -658,7 +667,14 @@
+@@ -142,6 +150,9 @@
+     gui->StartDraw();
+     interpreter->StartFrame();
+     interpreter->Run(commands, replacements);
++#ifdef __IOS__
++    SohIos_SpkMark(1); // overlay 0056 (mark 0 is Gui::StartDraw's end)
++#endif
+     if (OS_ViBlackActive()) {
+         interpreter->mGfxFrameBuffer = 0;
+         auto rapi = interpreter->GetCurrentRenderingAPI();
+@@ -149,6 +160,9 @@
+         rapi->ClearFramebuffer(true, false);
+     }
+     gui->EndDraw();
++#ifdef __IOS__
++    SohIos_SpkMark(2);
++#endif
+     sLastSubFrameNs = NsSince(runT0);
+ }
+ 
+@@ -168,6 +182,9 @@
+     interpreter->EndFrame();
+     CALL_EVENT(FrameDrawEnd);
+     interpreter->mInterpolationIndex++;
++#ifdef __IOS__
++    SohIos_SpkFrameEnd(); // overlay 0056: close the frame record (after LUS's pacing sleep)
++#endif
+ }
+ } // namespace
+ 
+@@ -178,7 +195,14 @@
          return;
      }
      auto interpreter = wnd->GetInterpreterWeak().lock().get();
@@ -678,45 +709,45 @@ scripts/lh_genlib.py against each file's state just before this patch.
 +#endif
      interpreter->mInterpolationIndex = 0;
      auto wndBase = Ship::Context::GetRawInstance()->GetWindow();
-     const auto passT0 = Clock::now();
-@@ -761,6 +777,9 @@
-             gui->StartDraw();
-             interpreter->StartFrame();
-             interpreter->Run(Commands, m);
-+#ifdef __IOS__
-+            SohIos_SpkMark(1); // overlay 0056 (mark 0 is Gui::StartDraw's end)
-+#endif
-             if (OS_ViBlackActive()) {
-                 interpreter->mGfxFrameBuffer = 0;
-                 auto rapi = interpreter->GetCurrentRenderingAPI();
-@@ -768,8 +787,14 @@
-                 rapi->ClearFramebuffer(true, false);
-             }
-             gui->EndDraw();
-+#ifdef __IOS__
-+            SohIos_SpkMark(2);
-+#endif
-             sLastSubFrameNs = NsSince(runT0);
-             interpreter->EndFrame();
-+#ifdef __IOS__
-+            SohIos_SpkFrameEnd(); // close the frame record (after LUS's pacing sleep)
-+#endif
-             CALL_EVENT(FrameDrawEnd);
-         }
-         interpreter->mInterpolationIndex++;
-@@ -1090,6 +1115,9 @@
-         }
+     Nametag::SetSubframeBlend(1.0f);
+@@ -187,6 +211,9 @@
+         PresentSubframe(interpreter);
      }
-     sMapBuildFutures.clear();
+     SyncAltAssets();
 +#ifdef __IOS__
 +    SohIos_SpkMark(4); // overlay 0056: pass exit
 +#endif
  }
  
- uint32_t GameEngine::GetInterpolationFPS() {
+ int GameEngine::CurrentViPerTick() {
+@@ -306,7 +333,14 @@
+     }
+     auto interpreter = wnd->GetInterpreterWeak().lock().get();
+     auto wndBase = Ship::Context::GetRawInstance()->GetWindow();
++#ifdef __IOS__
++    SohIos_SpkMark(3); // overlay 0056: a new tick's display list arrived
++    unsigned long long sohSpkEvT0 = SohIos_SpkNow();
++#endif
+     wnd->HandleEvents();
++#ifdef __IOS__
++    SohIos_SpkAdd(8, sohSpkEvT0, 0); // ev
++#endif
+     interpreter->mInterpolationIndex = 0;
+     static std::unordered_map<Mtx*, MtxF> maps[2];
+     Prefetcher& prefetcher = GetPrefetcher();
+@@ -372,6 +406,9 @@
+             break;
+         }
+     }
++#ifdef __IOS__
++    SohIos_SpkMark(4); // overlay 0056: pass exit
++#endif
+     if (prefetching) {
+         prefetcher.Wait();
+     }
 --- a/src/port/Game.cpp
 +++ b/src/port/Game.cpp
-@@ -232,6 +232,12 @@
+@@ -346,6 +346,12 @@
      (void)data;
      sFrameRendered = true;
  }
@@ -729,7 +760,7 @@ scripts/lh_genlib.py against each file's state just before this patch.
  
  void push_frame() {
      static int sTitleCounter = 0;
-@@ -324,14 +330,26 @@
+@@ -492,14 +498,26 @@
          port_noteMainLoopAlive();
          // Pump events every iteration: a task-starved pass must not starve
          // input and window messages.
@@ -753,10 +784,10 @@ scripts/lh_genlib.py against each file's state just before this patch.
 +#ifdef __IOS__
 +        SohIos_SpkAdd(11, sohSpkSvcT0, 0);
 +#endif
-         if (!ServiceRcp()) {
-             // The gui only draws inside serviced frames, so a stalled game
-             // thread would freeze ImGui with it. Render gui-only frames during
-@@ -341,7 +359,13 @@
+         if (sHost != nullptr) {
+             sHost->Poll();
+             if (sParked.load() && sHost->WantsFrame() && OS_SpPeekPendingTask() == nullptr && !sReleaseDeferred) {
+@@ -516,7 +534,13 @@
                  SDL_Delay(16);
                  continue;
              }

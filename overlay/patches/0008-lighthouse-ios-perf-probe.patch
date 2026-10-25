@@ -14,24 +14,27 @@ BK-specific parts corrected:
   gameplay have genuinely different pacing, and without it a correct 30 fps
   cutscene reading is indistinguishable from a regression. It is also how
   the intro-detection heuristic in 0013 gets verified on a real device.
-* **`sub=`** carries the sub-frames-per-tick count. At a 60 fps target the
-  engine renders 2 sub-frames per tick, at 120 it renders 4, and cutscenes can
-  legitimately cap to 1 (`port_getInterpolationFpsCap`). Without this field a
-  correct 30 fps cutscene reads as a regression.
+* **`sub=`** carries the number of frames the LAST pass presented. Through
+  1.1.0 that was a fixed sub-frames-per-tick count (2 at 60 fps, 4 at 120,
+  1 in capped cutscenes). Since 1.2.0's clock-timed pass (RunTimedPass, D40)
+  the pass draws at the window's rate until the next latch is due, so the
+  count varies tick to tick; it is read from the interpreter's interpolation
+  index at pass exit.
 
 **`tick_fps` vs `render_fps` — the probe measures TICKS, not presents.**
 `OnFrame` is called once per `ProcessGfxCommands`, i.e. once per 30 Hz game
-tick, and `RunCommands` renders `sub` sub-frames *inside* that call. So
-`tick_fps` is the tick rate (identical to `sim_tps` by construction) and the
-frame rate a player actually sees is `tick_fps * sub`, reported as
-`render_fps`. The original field was named `fps`, which read as the presented
-frame rate and understated it by the sub-frame factor — corrected here rather
-than left to mislead a future perf claim.
+tick, and the pass presents `sub` frames *inside* that call. So `tick_fps` is
+the tick rate (identical to `sim_tps` by construction) and the frame rate a
+player actually sees, `render_fps`, is the frames presented in the window
+divided by its length (exact, not tick_fps x sub, now that sub varies). The
+original field was named `fps`, which read as the presented frame rate and
+understated it by the sub-frame factor — corrected rather than left to
+mislead a future perf claim.
 
 `wall_ms` is the interval between consecutive `ProcessGfxCommands` entries;
-`eng_ms` is the time inside `RunCommands`. BOTH include in-call blocking, so
-`wall ≈ eng` means blocked-inside (GPU/pacing) while `wall >> eng` means CPU
-outside. The name is deliberately not "cpu_ms".
+`eng_ms` is the time inside the pass (either kind, RAII scope). BOTH include
+in-call blocking, so `wall ≈ eng` means blocked-inside (GPU/pacing) while
+`wall >> eng` means CPU outside. The name is deliberately not "cpu_ms".
 
 Dependencies, all already in the overlay and asserted present in this fork:
 `gSohIosGpuMs` (0028), `gSohIosUpWinBytes`/`Count` (0019/0020),
@@ -43,13 +46,12 @@ reference a debugging session.
 
 Match-count asserted against the pristine vendor state.
 
---- a/src/port/Engine.cpp
-+++ b/src/port/Engine.cpp
-@@ -678,7 +678,172 @@
- 
- bool GameEngine::IsInterpolationEnabled() {
-     return (int)GetInterpolationFPS() > EffectiveLogicFps();
-+}
+--- a/src/port/Interpolation/FramePacing.cpp
++++ b/src/port/Interpolation/FramePacing.cpp
+@@ -269,7 +269,201 @@
+     SyncAltAssets();
+ }
+ } // namespace
 +
 +
 +#ifdef __IOS__
@@ -94,6 +96,8 @@ Match-count asserted against the pristine vendor state.
 +                                        unsigned int* a, float* sep, float* mix);
 +extern "C" int port_getDemoViCount(void);
 +extern "C" int port_getCutsceneExtraVis(void);
++// mode= (core2.h's s32 getGameMode; FramePacing.cpp does not include core2).
++extern "C" int32_t getGameMode(void);
 +
 +namespace LighthousePerf {
 +// BK ticks at 60/gVIsPerFrame = 30 Hz (D6). Everything sim-rate is against this.
@@ -106,7 +110,7 @@ Match-count asserted against the pristine vendor state.
 +// reading the code. sim_ratio must be measured against the rate the engine is
 +// ACTUALLY targeting this tick, or it cries wolf on every non-gameplay screen.
 +static constexpr double kLogicHz = 30.0;
-+
+ 
 +static double LhIos_EffectiveLogicHz() {
 +    int viPerTick = port_getDemoViCount();
 +    if (viPerTick <= 0) {
@@ -121,6 +125,7 @@ Match-count asserted against the pristine vendor state.
 +struct Probe {
 +    std::vector<double> frameMs, engMs, gpuMs;
 +    uint64_t ticks = 0;
++    uint64_t rendered = 0; // frames presented this window (render_fps)
 +    int lastSub = 0;
 +    uint32_t hudFrames = 0;
 +    float hudFps = 0.0f;
@@ -132,6 +137,7 @@ Match-count asserted against the pristine vendor state.
 +        engMs.push_back(engineMs);
 +        gpuMs.push_back((double)gSohIosGpuMs);
 +        lastSub = subframes;
++        rendered += (uint64_t)(subframes > 0 ? subframes : 1);
 +        auto now = std::chrono::steady_clock::now();
 +        // Count RENDERED frames, not ticks. OnFrame runs once per 30 Hz game
 +        // tick and RunCommands renders `subframes` of them inside that call, so
@@ -187,7 +193,7 @@ Match-count asserted against the pristine vendor state.
 +                    pct(frameMs, 0.5), pct(frameMs, 0.95), pct(frameMs, 0.99), frameMs.back(),
 +                    pct(engMs, 0.5), pct(engMs, 0.95), engMs.back(),
 +                    pct(gpuMs, 0.5), pct(gpuMs, 0.95),
-+                    frameMs.size(), frameMs.size() / el, (frameMs.size() / el) * (double)(lastSub > 0 ? lastSub : 1),
++                    frameMs.size(), frameMs.size() / el, rendered / el,
 +                    simTps, simTps / LhIos_EffectiveLogicHz(), lastSub, (int)getGameMode(),
 +                    SohIos_ThermalState(), gSohIosUpWinBytes / 1048576.0, gSohIosUpWinCount,
 +                    libMs, libN, psoMs, psoN, audMin, audMax, audFloor, audSilent,
@@ -200,10 +206,35 @@ Match-count asserted against the pristine vendor state.
 +        engMs.clear();
 +        gpuMs.clear();
 +        ticks = 0;
++        rendered = 0;
 +        lastReport = now;
 +    }
 +};
 +static Probe gProbe;
++
++// One game tick's render pass, timed from just after the ucode is set to the
++// function's return -- RAII, because ProcessGfxCommands leaves through two
++// returns since 1.2.0 (the clock-timed pass and the single-frame RunCommands).
++// eng_ms therefore covers either pass whole, including RunTimedPass's wait of
++// up to 3 ms for the next tick's VI count and the pass's own present waits.
++// Frames presented = the interpreter's interpolation index at exit: both
++// passes zero it at entry and bump it once per presented sub-frame.
++struct PassScope {
++    std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
++    std::shared_ptr<Fast::Fast3dWindow> wnd;
++    explicit PassScope(std::shared_ptr<Fast::Fast3dWindow> w) : wnd(std::move(w)) {
++    }
++    ~PassScope() {
++        const double eng =
++            std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
++        int frames = 1;
++        if (auto interp = wnd->GetInterpreterWeak().lock()) {
++            frames = (int)interp->mInterpolationIndex;
++        }
++        gProbe.OnFrame(eng, frames);
++        gProbe.OnTick();
++    }
++};
 +} // namespace LighthousePerf
 +
 +// Rolling 1 s RENDERED fps for the shell's perf HUD — the number a player would
@@ -213,27 +244,19 @@ Match-count asserted against the pristine vendor state.
 +    if (fps != nullptr) {
 +        *fps = LighthousePerf::gProbe.hudFps;
 +    }
- }
++}
 +#endif // __IOS__
- 
++
  void GameEngine::ProcessGfxCommands(Gfx* commands) {
      auto wnd = std::dynamic_pointer_cast<Fast::Fast3dWindow>(Ship::Context::GetRawInstance()->GetWindow());
-@@ -734,7 +899,18 @@
-         activeFrames = 1;
-     }
  
+@@ -281,6 +475,9 @@
+     //     wnd->EnableSRGBMode();
+     // }
+     wnd->SetRendererUCode(UcodeHandlers::ucode_f3dex);
 +#ifdef __IOS__
-+    {
-+        const auto lhT0 = std::chrono::steady_clock::now();
-+        RunCommands(commands, mtx_replacements, activeFrames);
-+        const double lhEng =
-+            std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - lhT0).count();
-+        LighthousePerf::gProbe.OnFrame(lhEng, subframesPerTick);
-+        LighthousePerf::gProbe.OnTick();
-+    }
-+#else
-     RunCommands(commands, mtx_replacements, activeFrames);
++    LighthousePerf::PassScope lhPerfPass(wnd); // overlay 0008: eng_ms + tick count
 +#endif
  
-     for (auto& f : sMapBuildFutures) {
-         if (f.valid()) {
+     if (sFrameTimed) {
+         const int fps = (int)GetInterpolationFPS();

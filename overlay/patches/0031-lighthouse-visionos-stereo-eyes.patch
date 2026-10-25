@@ -600,7 +600,7 @@ never leaves 0; the macOS build compiles none of it.
                  MatrixMul(mRsp->MP_matrix, mRsp->modelview_matrix_stack[mRsp->modelview_matrix_stack_size - 1],
                            mRsp->P_matrix);
              }
-@@ -3336,6 +3493,14 @@
+@@ -3347,6 +3504,14 @@
      const char* filename = (const char*)(cmd)->words.w1;
      uint32_t p = C0(16, 8);
      uint32_t l = C0(0, 16);
@@ -615,7 +615,7 @@ never leaves 0; the macOS build compiles none of it.
      if (p == 7) {
          g_exec_stack.openDisp(filename, l);
      } else if (p == 8) {
-@@ -5083,6 +5248,22 @@
+@@ -5099,6 +5264,22 @@
          mRendersToFb = false;
      }
  
@@ -638,7 +638,7 @@ never leaves 0; the macOS build compiles none of it.
      mFbActive = false;
  }
  
-@@ -5136,6 +5317,23 @@
+@@ -5152,6 +5333,23 @@
  
      mCurMtxReplacements = &mtx_replacements;
  
@@ -662,7 +662,7 @@ never leaves 0; the macOS build compiles none of it.
      mRapi->UpdateFramebufferParameters(0, mGfxCurrentWindowDimensions.width, mGfxCurrentWindowDimensions.height, 1,
                                         false, true, true, !mRendersToFb);
      mRapi->StartFrame();
-@@ -5171,6 +5369,14 @@
+@@ -5187,6 +5385,14 @@
      mGfxFrameBuffer = 0;
      currentDir = std::stack<std::string>();
  
@@ -677,7 +677,7 @@ never leaves 0; the macOS build compiles none of it.
      if (mRendersToFb) {
          mRapi->StartDrawToFramebuffer(0, 1);
          mRapi->ClearFramebuffer(true, true);
-@@ -5196,9 +5402,124 @@
+@@ -5212,9 +5418,124 @@
  void Interpreter::EndFrame() {
      mRapi->EndFrame();
      mWapi->SwapBuffersBegin();

@@ -20,7 +20,7 @@ then run scripts/apply-overlay.sh.
 
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -235,22 +235,172 @@
+@@ -236,22 +236,172 @@
  endforeach()
  
  if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
@@ -202,7 +202,7 @@ then run scripts/apply-overlay.sh.
      )
  else()
      add_executable(${PROJECT_NAME} ${ALL_FILES})
-@@ -442,8 +592,38 @@
+@@ -443,8 +593,38 @@
      if(MSVC)
          vcpkg_install_packages(sdl2-net)
      endif()
@@ -243,7 +243,7 @@ then run scripts/apply-overlay.sh.
      target_compile_definitions(${PROJECT_NAME} PRIVATE USE_NETWORKING)
  endif()
  
-@@ -479,6 +659,45 @@
+@@ -480,6 +660,45 @@
      target_include_directories(${PROJECT_NAME} PRIVATE
          ${DEVKITPRO}/portlibs/wiiu/include/
      )

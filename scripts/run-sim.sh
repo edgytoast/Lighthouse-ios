@@ -3,7 +3,10 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP="$ROOT/spikes/lighthouse-sim-build/Release-iphonesimulator/Lighthouse.app"
-UDID="${LIGHTHOUSE_SIM_UDID:-DB38CE9F-5A98-4723-B2D3-40BFE2AC922F}"
+SIM_NAME="${LIGHTHOUSE_SIM_NAME:-iPhone 17e}"
+UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; n=sys.argv[1]; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k,v in d.items() if 'iOS-27-0' in k for x in v if x['name']==n))" "$SIM_NAME")
+[[ -n "$UDID" ]] || { echo "FATAL: no available '$SIM_NAME' on iOS 27.0 (ask the user; never simctl create)" >&2; exit 1; }
+UDID="${LIGHTHOUSE_SIM_UDID:-$UDID}"
 BUNDLE_ID="com.rebelancap.lighthouse"
 SHOT="${1:-$ROOT/artifacts/sim/boot-$(date -u +%Y%m%d-%H%M%S).png}"
 
@@ -11,7 +14,7 @@ die() { printf '\033[31mFATAL:\033[0m %s\n' "$*" >&2; exit 1; }
 info() { printf '\033[36m==>\033[0m %s\n' "$*"; }
 
 [ -d "$APP" ] || die "no app at $APP — run scripts/build-sim.sh"
-xcrun simctl list devices | grep -q "$UDID" || die "simulator $UDID not found (see DECISIONS D8)"
+xcrun simctl list devices | grep -q "$UDID" || die "simulator $UDID not found (lane 3 iPhone 17e by default; D8 superseded)"
 
 mkdir -p "$(dirname "$SHOT")"
 

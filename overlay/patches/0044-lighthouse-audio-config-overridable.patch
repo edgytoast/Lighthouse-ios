@@ -76,7 +76,7 @@ produced a given recording.
 
 --- a/src/port/Engine.cpp
 +++ b/src/port/Engine.cpp
-@@ -117,6 +117,23 @@
+@@ -99,6 +99,23 @@
  
  // Construction
  
@@ -100,7 +100,7 @@ produced a given recording.
  GameEngine::GameEngine() {
      this->context = Ship::Context::CreateUninitializedInstance("Lighthouse", "bk", "lighthouse.cfg.json");
  
-@@ -155,7 +172,32 @@
+@@ -137,7 +154,35 @@
  
      lhFast3dWindow = std::make_shared<Fast::Fast3dWindow>(std::vector<std::shared_ptr<Ship::GuiWindow>>({}));
      this->context->InitWindow(lhFast3dWindow);
@@ -115,6 +115,9 @@ produced a given recording.
 +        // function for the same answer so the device plays at EXACTLY the rate
 +        // the game produces. (22000 -> 21998.)
 +        const int32_t lhActual = osAiSetFrequency(lhRate);
++        // 736 stays the iOS default: it is the shipped, measured value. Upstream
++        // 1.2.0 (2d04de85, an ASan batch) moved the DESKTOP SDL buffer to 1024;
++        // adopting that here is a separate, measured change (D40).
 +        const int32_t lhLen = CVarGetInteger("gSohIos.AudioSampleLength", 736);
 +        int32_t lhBuf = CVarGetInteger("gSohIos.AudioDesiredBuffered", 0);
 +        if (lhBuf <= 0) {
@@ -128,14 +131,14 @@ produced a given recording.
 +            { .SampleRate = lhActual, .SampleLength = lhLen, .DesiredBuffered = lhBuf });
 +    }
 +#else
-     this->context->InitAudio({ .SampleRate = 22000, .SampleLength = 736, .DesiredBuffered = 2208 });
+     this->context->InitAudio({ .SampleRate = 22000, .SampleLength = 1024, .DesiredBuffered = 2208 });
 +#endif
  
      LighthouseGui::SetupMenu();
  
 --- a/src/core1/audio_manager.c
 +++ b/src/core1/audio_manager.c
-@@ -308,7 +308,17 @@
+@@ -305,7 +305,17 @@
      osCreateMesgQueue(&audioManager.audioReplyMsgQ, audioManager.audioReplyMsgBuf, 8);
      osCreateMesgQueue(&audioManager.audioFrameMsgQ, audioManager.audioFrameMsgBuf, 8);
  
@@ -153,7 +156,7 @@ produced a given recording.
      sFrameSize = fsize;
      if (sFrameSize < fsize) {
          sFrameSize++;
-@@ -324,7 +334,13 @@
+@@ -321,7 +331,13 @@
      sn_alConfig.fxType = AL_FX_CUSTOM;
      sn_alConfig.params = sEffectsChain;
      sn_alConfig.heap = &sALHeapInfo;

@@ -36,9 +36,9 @@ Inert off iOS. Clamped to sane values so a corrupt CVar cannot stall the engine.
 
 Match-count asserted against the pristine vendor state.
 
---- a/src/port/Engine.cpp
-+++ b/src/port/Engine.cpp
-@@ -745,16 +745,36 @@
+--- a/src/port/Interpolation/FramePacing.cpp
++++ b/src/port/Interpolation/FramePacing.cpp
+@@ -493,14 +493,34 @@
  }
  
  uint32_t GameEngine::GetInterpolationFPS() {
@@ -77,5 +77,3 @@ Match-count asserted against the pristine vendor state.
 +
 +    return lhFps;
  }
- 
- uint32_t GameEngine::GetInterpolationFrameCount() {

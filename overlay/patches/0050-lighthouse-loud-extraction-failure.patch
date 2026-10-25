@@ -63,9 +63,9 @@ just where the ROM lands in the shortcut's path.
 
 --- a/src/port/Extractor/ExtractFlow.cpp
 +++ b/src/port/Extractor/ExtractFlow.cpp
-@@ -391,6 +391,21 @@
-             }
+@@ -399,6 +399,21 @@
              case ES_EXTRACT_ARGS: {
+                 romArchive = nullptr;
  #if !defined(__SWITCH__) && !defined(__WIIU__)
 +                // LIGHTHOUSE_IOS (overlay 0050): report a FAILED extraction here.
 +                // sLastError is only rendered by ES_VERIFY, but this route never
@@ -85,11 +85,11 @@ just where the ROM lands in the shortcut's path.
                  if (args.size() == 0) {
                      LighthouseGui::RegisterPopup(
                          "Run Lighthouse", "All files have been processed. Run Lighthouse?", "Yes", "No",
-@@ -492,7 +507,14 @@
-                     case PS_FIRST: {
-                         if (args.empty()) {
-                             std::string baserom = Ship::Context::GetPathRelativeToAppDirectory("baserom.us.z64");
--                            if (std::filesystem::exists(baserom) && extract.LoadRomFromPath(baserom)) {
+@@ -512,7 +527,14 @@
+                                     break;
+                                 }
+                             }
+-                            if (!baserom.empty() && extract.LoadRomFromPath(baserom)) {
 +                            // LIGHTHOUSE_IOS (overlay 0050): RunStandalone, not LoadRomFromPath.
 +                            // LoadRomFromPath is a bare byte read, so this shortcut fired for ANY
 +                            // file with that name and then skipped the picker -- and on iOS this
@@ -97,13 +97,13 @@ just where the ROM lands in the shortcut's path.
 +                            // ROM. A hack got swallowed by a shortcut meant for a known-good dump.
 +                            // RunStandalone is load-plus-verify and leaves the same state behind,
 +                            // so retail keeps the shortcut and anything else reaches the picker.
-+                            if (std::filesystem::exists(baserom) && extract.RunStandalone(baserom)) {
++                            if (!baserom.empty() && extract.RunStandalone(baserom)) {
                                  extracting = true;
                                  extractStarted = true;
                                  file = extract.GetRomPath();
 --- a/src/port/Extractor/GameExtractor.cpp
 +++ b/src/port/Extractor/GameExtractor.cpp
-@@ -377,6 +377,32 @@
+@@ -388,6 +388,32 @@
      // Record the produced archive path before tearing Companion down, so the
      // inline Mod Menu flow can enable exactly this file by name.
      sLastOutputPath = Companion::Instance->GetOutputPath();

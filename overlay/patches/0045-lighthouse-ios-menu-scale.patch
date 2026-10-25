@@ -23,7 +23,7 @@ device.
 
 --- a/src/port/Engine.cpp
 +++ b/src/port/Engine.cpp
-@@ -359,12 +359,26 @@
+@@ -392,12 +392,26 @@
  
  void GameEngine::ScaleImGui() {
      int32_t imGuiScaleIndex = CVarGetInteger("gSettings.ImGuiScale", defaultImGuiScale);

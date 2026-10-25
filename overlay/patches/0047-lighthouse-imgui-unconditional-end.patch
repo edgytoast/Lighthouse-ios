@@ -15,7 +15,7 @@ be paired with `End()` / `EndChild()` **unconditionally** — the return value
 says whether the contents are VISIBLE, not whether the window was pushed. The
 old "skip End() when Begin() returns false" idiom was removed for child windows
 in ImGui 1.90, and the version LUS ships treats it as an error. Upstream writes
-the terminator inside the `if` in 17 places:
+the terminator inside the `if` in 19 places (as of 1.2.0):
 
     if (ImGui::BeginChild("SeedData", ...)) {
         ...
@@ -35,11 +35,13 @@ WHY IT BITES iOS HARDER THAN DESKTOP. Every one of these children is sized from
 returns false, and the terminator is skipped. On a desktop-sized window most of
 them stay visible and the bug hides.
 
-SCOPE — all 17 sites, not just Rando's:
+SCOPE — all 19 sites (17 through 1.1.0; 19 since 1.2.0), not just Rando's:
   * `Rando/CheckTracker/CheckTracker.cpp`   x4  (one is a `Begin()`/`End()`)
   * `Rando/Logic/Metrics.cpp`               x4  (the Seed Metrics tab bar)
   * `UI/DeveloperTools/SaveEditor.cpp`      x5
-  * `UI/DeveloperTools/GameplayTools.cpp`   x2
+  * `UI/DeveloperTools/GameplayTools.cpp`   x1
+  * `UI/DeveloperTools/Warps.cpp`           x1  (moved out of GameplayTools, 1.2.0)
+  * `Enhancements/Trackers/WorldTracker/WorldTracker.cpp` x2 (new in 1.2.0)
   * `UI/LighthouseModMenuWindow.cpp`        x2  (the texture-pack UI the README
                                                  tells users to open)
 The Mod Menu pair matters as much as Rando's: a corrupted stack there would hit
@@ -50,7 +52,7 @@ of these files, and the imbalance is plain in upstream's source. Worth reporting
 upstream — the fix there is identical.
 
 HOW THE FIX IS DERIVED, and why that is safe. The sites are found structurally
-(brace matching) rather than by 17 hand-written string matches, then each one is
+(brace matching) rather than by 19 hand-written string matches, then each one is
 checked against four invariants before it is touched:
 
   1. exactly one terminator in the block,
@@ -61,16 +63,41 @@ checked against four invariants before it is touched:
 (1)-(3) make "move it past the brace" a pure relocation; (4) is what makes it
 semantically identical — a `return` would skip the moved call. Three blocks do
 contain jumps, all `continue` inside nested loops, which cannot escape the
-block. The site count is asserted at 17, so an upstream bump that adds a site,
+block. The site count is asserted (EXPECTED_SITES, 19), so an upstream bump that adds a site,
 fixes one, or reshapes one fails the generator loudly instead of silently
 leaving a broken menu behind (program ground rule 3).
 
 Behaviour when the window IS visible is bit-identical. When it is culled, the
 stack now unwinds correctly instead of corrupting the whole menu.
 
+--- a/src/port/Enhancements/Trackers/WorldTracker/WorldTracker.cpp
++++ b/src/port/Enhancements/Trackers/WorldTracker/WorldTracker.cpp
+@@ -253,8 +253,9 @@
+                     WorldTracker_DrawWorldObject(level);
+                 }
+             }
+-            ImGui::EndChild();
+         }
++        // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++        ImGui::EndChild();
+     }
+ }
+ 
+@@ -426,8 +427,9 @@
+         if (!worldTrackerPopoutState) {
+             if (ImGui::BeginChild("EmbeddedWorldTrackerChild")) {
+                 WorldTracker_DrawTracker();
+-                ImGui::EndChild();
+-            }
++            }
++            // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++            ImGui::EndChild();
+         } else {
+             ImGui::TextColored(UIWidgets::ColorValues.at(WIDGET_COLOR), "Tracker popped out");
+         }
 --- a/src/port/Rando/CheckTracker/CheckTracker.cpp
 +++ b/src/port/Rando/CheckTracker/CheckTracker.cpp
-@@ -155,8 +155,9 @@
+@@ -156,8 +156,9 @@
                                   ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar)) {
                  ImGui::SetWindowFontScale(collectedChecksScale);
                  ImGui::Text("Checks: %s", totalCheckCount.c_str());
@@ -81,7 +108,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
              ImGui::PopStyleColor(3);
          } else {
              ImGui::Text("Checks: %s", totalCheckCount.c_str());
-@@ -307,8 +308,9 @@
+@@ -308,8 +309,9 @@
              if (ImGui::BeginChild("CheckTrackerChild")) {
                  DrawCheckTrackerList();
                  expandState = expandToggle;
@@ -92,7 +119,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
          }
      }
  
-@@ -344,8 +346,9 @@
+@@ -345,8 +347,9 @@
          if (!checkTrackerPopoutState) {
              if (ImGui::BeginChild("EmbeddedCheckTrackerChild")) {
                  DrawCheckTrackerList();
@@ -103,7 +130,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
          } else {
              ImGui::TextColored(UIWidgets::ColorValues.at(WIDGET_COLOR), "Tracker popped out");
          }
-@@ -448,8 +451,9 @@
+@@ -449,8 +452,9 @@
                  ImGui::PopID();
                  checkColorIndex++;
              }
@@ -162,7 +189,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  void Metrics_DrawTabBar() {
 --- a/src/port/UI/DeveloperTools/GameplayTools.cpp
 +++ b/src/port/UI/DeveloperTools/GameplayTools.cpp
-@@ -421,8 +421,9 @@
+@@ -425,8 +425,9 @@
              }
              ImGui::EndTable();
          }
@@ -172,22 +199,10 @@ stack now unwinds correctly instead of corrupting the whole menu.
 +    ImGui::EndChild();
  }
  
- void DrawGrantUnlocks() {
-@@ -498,8 +499,9 @@
-             }
-             ImGui::EndTable();
-         }
--        ImGui::EndChild();
--    }
-+    }
-+    // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
-+    ImGui::EndChild();
- }
- 
  void GameplayTools_DrawTabBar() {
 --- a/src/port/UI/DeveloperTools/SaveEditor.cpp
 +++ b/src/port/UI/DeveloperTools/SaveEditor.cpp
-@@ -195,8 +195,9 @@
+@@ -196,8 +196,9 @@
              ImGui::EndTable();
          }
  
@@ -198,7 +213,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  }
  
  void SaveEditor_DrawGeneralTab() {
-@@ -296,8 +297,9 @@
+@@ -297,8 +298,9 @@
              ImGui::PopID();
          }
  
@@ -210,7 +225,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  }
  
  void SaveEditor_DrawProgressTab() {
-@@ -417,8 +419,9 @@
+@@ -418,8 +420,9 @@
          }
          ImGui::PopStyleVar(1);
  
@@ -221,7 +236,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  }
  
  void DrawRandoFlagEditor() {
-@@ -436,8 +439,9 @@
+@@ -437,8 +440,9 @@
              }
              ImGui::PopID();
          }
@@ -232,7 +247,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  }
  
  void DrawRandoCheckEditor() {
-@@ -533,8 +537,9 @@
+@@ -534,8 +538,9 @@
                  }
                  ImGui::EndTable();
              }
@@ -243,6 +258,19 @@ stack now unwinds correctly instead of corrupting the whole menu.
      }
  }
  
+--- a/src/port/UI/DeveloperTools/Warps.cpp
++++ b/src/port/UI/DeveloperTools/Warps.cpp
+@@ -558,8 +558,9 @@
+             }
+             ImGui::PopID();
+         }
+-        ImGui::EndChild();
+     }
++    // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++    ImGui::EndChild();
+ }
+ 
+ void DrawPlayerTools() {
 --- a/src/port/UI/LighthouseModMenuWindow.cpp
 +++ b/src/port/UI/LighthouseModMenuWindow.cpp
 @@ -616,16 +616,18 @@

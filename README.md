@@ -91,6 +91,9 @@ do. Turn it off to compare against vanilla.
 - The **randomizer** and **online co-op (Anchor)**, as shipped upstream
 - **Presets** — save a whole set of enhancement/rando options under a name and
   reapply it in one tap (Settings → Presets)
+- **Music and Sound Effects volume sliders** beside Master volume (Settings →
+  General), a **Cosmetics Editor** and a **World Tracker** (Enhancements), plus
+  new gameplay options such as **Tooie Roll** and **Always Update Actors**
 - **ROM-hack support** — extract a Banjo's Backpack hack on the device itself and it
   installs as a mod overlay (custom MIPS code isn't extractable, so hacks that rely on
   it will be missing that behaviour). Needs a **US v1.0** base — see the FAQ

@@ -29,7 +29,7 @@ then run scripts/apply-overlay.sh.
  #include "ship/controller/controldevice/controller/mapping/keyboard/KeyboardScancodes.h"
  #include <cstring>
  #include <iostream>
-@@ -482,8 +486,31 @@
+@@ -489,8 +493,31 @@
  #endif
  
  #ifdef __IOS__

@@ -41,7 +41,7 @@ patch.
 
 --- a/src/port/Extractor/ExtractFlow.h
 +++ b/src/port/Extractor/ExtractFlow.h
-@@ -12,3 +12,7 @@
+@@ -15,4 +15,8 @@
  extern std::string assets_path;
  extern bool portArchiveVersionMatch;
  extern std::shared_ptr<Fast::Fast3dWindow> lhFast3dWindow;
@@ -49,9 +49,10 @@ patch.
 +// LIGHTHOUSE_IOS (overlay 0059): one-line verdict of RunExtract's ROM-archive
 +// version check, logged by FinishInit once logging is up.
 +const std::string& LighthouseArchiveVerdict();
+ extern std::shared_ptr<Ship::Archive> romArchive;
 --- a/src/port/Extractor/ExtractFlow.cpp
 +++ b/src/port/Extractor/ExtractFlow.cpp
-@@ -39,6 +39,22 @@
+@@ -40,6 +40,22 @@
      uint16_t patch;
  } OTRVersion;
  
@@ -73,8 +74,8 @@ patch.
 +
  OTRVersion ReadPortVersionFromOTR(std::string otrPath) {
      OTRVersion version = {};
- 
-@@ -145,6 +161,10 @@
+     auto archive = std::make_shared<Ship::O2rArchive>(otrPath);
+@@ -146,6 +162,10 @@
  
  } // namespace
  
@@ -85,7 +86,7 @@ patch.
  void GameEngine::RunExtract(int argc, char* argv[]) {
      bool extractDone = false;
      ExtractSteps extractStep = ES_PORT_ARCHIVE;
-@@ -168,6 +188,20 @@
+@@ -169,6 +189,20 @@
  
      bool shouldRegen = !VerifyArchiveVersion(romArchiveVersion) && romArchiveVersion.major != INT16_MAX;
  
@@ -106,10 +107,10 @@ patch.
      std::filesystem::path ownPath;
      std::vector<std::string> args;
      for (int i = 1; i < argc; i++) {
-@@ -222,9 +256,34 @@
-         LighthouseGui::RegisterPopup("Outdated ROM Archives",
+@@ -229,9 +263,34 @@
                                       "Your ROM archives were created with incompatible versions of Lighthouse.\n"
                                       "You will now be redirected to re-extract them.");
+         romArchive = nullptr;
 -        for (const auto& archive : kRomArchives) {
 -            std::filesystem::remove(archive);
 +        // LIGHTHOUSE_IOS (overlay 0059): act on the archive the version was read
@@ -143,7 +144,7 @@ patch.
      }
  
      std::shared_ptr<BS::thread_pool> threadPool = std::make_shared<BS::thread_pool>(1);
-@@ -637,6 +696,17 @@
+@@ -657,6 +716,17 @@
                      }
                      continue;
                  }
@@ -163,7 +164,7 @@ patch.
              }
 --- a/src/port/Engine.cpp
 +++ b/src/port/Engine.cpp
-@@ -339,6 +339,8 @@
+@@ -361,6 +361,8 @@
      Ship::Context::GetRawInstance()->GetLogger()->set_pattern("[%H:%M:%S.%e] [%s:%#] [%l] %v");
      SPDLOG_INFO("Starting Lighthouse version {} (Branch: {} | Commit: {})", (char*)gBuildVersion, (char*)gGitBranch,
                  (char*)gGitCommitHash);

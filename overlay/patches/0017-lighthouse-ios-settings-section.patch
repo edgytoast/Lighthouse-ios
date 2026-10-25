@@ -89,10 +89,10 @@ Match-count asserted against the pristine vendor state.
  
  void LighthouseMenu::AddMenuSettings() {
      // Add Settings Menu
-@@ -322,7 +356,167 @@
+@@ -316,7 +350,167 @@
                       .ComponentAlignment(ComponentAlignments::Right)
-                      .LabelPosition(LabelPositions::Far));
-     //.Callback([](WidgetInfo& info) { GameEngine::Instance->ScaleImGui(); });
+                      .LabelPosition(LabelPositions::Far))
+         .Callback([](WidgetInfo& info) { GameEngine::Instance->ScaleImGui(); });
 +
 +
 +#ifdef __IOS__
