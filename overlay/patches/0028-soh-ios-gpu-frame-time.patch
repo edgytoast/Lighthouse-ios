@@ -23,7 +23,7 @@ into a global; the shell/probe export it (SohIos_GpuMs).
  
  #include "fast/backends/gfx_metal_shader.h"
  
-@@ -622,6 +630,18 @@
+@@ -667,6 +675,18 @@
  
      screen_framebuffer.mCommandBuffer->presentDrawable(mCurrentDrawable);
      mCurrentVertexBufferPoolIndex = (mCurrentVertexBufferPoolIndex + 1) % kMaxVertexBufferPoolSize;

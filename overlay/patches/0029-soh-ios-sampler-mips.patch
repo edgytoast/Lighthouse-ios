@@ -5,13 +5,22 @@ get trilinear + 4x anisotropy; the N64 three-point/nearest path keeps
 nearest-mip so the authentic look is preserved. Samplers are created
 before the texture uploads, so this applies unconditionally — sampling a
 single-level texture with a mip filter is well-defined (level 0).
+Narrowed for Lighthouse 1.2.2 (LUS e175b959 "fast3d: draw N64 mipmaps"):
+upstream now sets SamplerMipFilterNearest on every sampler. That is the
+right value for its own N64 chains, which the shader samples with an
+explicit integer level() and blends in the combiner (lodFrac) — so it is
+kept for the nearest path, and only the linear path is switched to
+trilinear + 4x anisotropy for 0019's GPU-generated HD chains. An explicit
+integer level() reads the same texels under a linear mip filter, so this
+does not fight upstream's N64 path.
 
 --- a/libultraship/src/fast/backends/gfx_metal.cpp
 +++ b/libultraship/src/fast/backends/gfx_metal.cpp
-@@ -393,6 +393,15 @@
+@@ -432,7 +432,15 @@
                                            : MTL::SamplerMinMagFilterNearest;
      sampler_descriptor->setMinFilter(filter);
      sampler_descriptor->setMagFilter(filter);
+-    sampler_descriptor->setMipFilter(MTL::SamplerMipFilterNearest);
 +    // SOH_IOS (overlay 0029): read the 0019-rev3 mip chains — trilinear +
 +    // modest anisotropy on the linear path; nearest-mip preserves the
 +    // three-point/nearest N64 look. Single-level textures sample level 0.

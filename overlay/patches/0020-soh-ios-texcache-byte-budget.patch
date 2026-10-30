@@ -23,7 +23,7 @@ Fix, three parts:
 
 --- a/libultraship/include/fast/backends/gfx_rendering_api.h
 +++ b/libultraship/include/fast/backends/gfx_rendering_api.h
-@@ -74,6 +74,12 @@
+@@ -83,6 +83,12 @@
      virtual void* GetFramebufferTextureId(int fbId) = 0;
      virtual void SelectTextureFb(int fbId) = 0;
      virtual void DeleteTexture(uint32_t texId) = 0;
@@ -38,7 +38,7 @@ Fix, three parts:
      virtual void SetSrgbMode() = 0;
 --- a/libultraship/include/fast/backends/gfx_metal.h
 +++ b/libultraship/include/fast/backends/gfx_metal.h
-@@ -169,6 +169,7 @@
+@@ -177,6 +177,7 @@
      void* GetFramebufferTextureId(int fbId) override;
      void SelectTextureFb(int fbId) override;
      void DeleteTexture(uint32_t texId) override;
@@ -48,7 +48,7 @@ Fix, three parts:
      void SetSrgbMode() override;
 --- a/libultraship/include/fast/backends/gfx_metal.h
 +++ b/libultraship/include/fast/backends/gfx_metal.h
-@@ -195,6 +195,9 @@
+@@ -203,6 +203,9 @@
          mShaderProgramPool;
  
      std::vector<struct TextureDataMetal> mTextures;
@@ -60,7 +60,7 @@ Fix, three parts:
      CoordUniforms mCoordUniforms;
 --- a/libultraship/src/fast/backends/gfx_metal.cpp
 +++ b/libultraship/src/fast/backends/gfx_metal.cpp
-@@ -333,8 +333,34 @@
+@@ -336,8 +336,34 @@
  }
  
  void GfxRenderingAPIMetal::DeleteTexture(uint32_t texID) {
@@ -97,7 +97,7 @@ Fix, three parts:
      mCurrentTextureIds[tile] = texture_id;
 --- a/libultraship/src/fast/interpreter.cpp
 +++ b/libultraship/src/fast/interpreter.cpp
-@@ -1388,6 +1388,43 @@
+@@ -1693,6 +1693,43 @@
              SPDLOG_ERROR("Invalid texture format. Fmt = {}", fmt);
              break;
      }

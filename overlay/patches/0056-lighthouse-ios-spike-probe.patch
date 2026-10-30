@@ -435,8 +435,8 @@ scripts/lh_genlib.py against each file's state just before this patch.
          prg = mRapi->CreateAndLoadNewShader(id0, id1);
          mRenderingState.mShaderProgram = prg;
      }
-@@ -1250,6 +1279,9 @@
- void Interpreter::ImportTexture(int i, int tile, bool importReplacement) {
+@@ -1554,6 +1583,9 @@
+     mImportTile = tile;
      uint8_t fmt = mRdp->texture_tile[tile].fmt;
      uint8_t siz = mRdp->texture_tile[tile].siz;
 +#ifdef __IOS__
@@ -445,7 +445,7 @@ scripts/lh_genlib.py against each file's state just before this patch.
      uint32_t texFlags = mRdp->loaded_texture[mRdp->texture_tile[tile].tmem_index].tex_flags;
      uint32_t tmemIdex = mRdp->texture_tile[tile].tmem_index;
      uint8_t paletteIndex = mRdp->texture_tile[tile].palette;
-@@ -1772,6 +1804,9 @@
+@@ -2077,6 +2109,9 @@
  }
  
  void Interpreter::GfxSpVertex(size_t n_vertices, size_t dest_index, const F3DVtx* vertices) {
@@ -455,7 +455,7 @@ scripts/lh_genlib.py against each file's state just before this patch.
      for (size_t i = 0; i < n_vertices; i++, dest_index++) {
          const F3DVtx_t* v = &vertices[i].v;
          const F3DVtx_tn* vn = &vertices[i].n;
-@@ -1971,6 +2006,9 @@
+@@ -2276,6 +2311,9 @@
  }
  
  void Interpreter::GfxSpTri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bool is_rect) {
@@ -467,7 +467,7 @@ scripts/lh_genlib.py against each file's state just before this patch.
      struct LoadedVertex* v3 = &mRsp->loaded_vertices[vtx3_idx];
 --- a/libultraship/src/fast/backends/gfx_metal.cpp
 +++ b/libultraship/src/fast/backends/gfx_metal.cpp
-@@ -1791,7 +1791,30 @@
+@@ -1854,7 +1854,30 @@
      source_framebuffer.mLastZmodeDecal = -1;
  }
  
@@ -665,7 +665,7 @@ scripts/lh_genlib.py against each file's state just before this patch.
  #include "port/Patches/Patches.h"
  #include "port/UI/cvar_prefixes.h"
  
-@@ -142,6 +150,9 @@
+@@ -148,6 +156,9 @@
      gui->StartDraw();
      interpreter->StartFrame();
      interpreter->Run(commands, replacements);
@@ -675,18 +675,18 @@ scripts/lh_genlib.py against each file's state just before this patch.
      if (OS_ViBlackActive()) {
          interpreter->mGfxFrameBuffer = 0;
          auto rapi = interpreter->GetCurrentRenderingAPI();
-@@ -149,6 +160,9 @@
+@@ -155,6 +166,9 @@
          rapi->ClearFramebuffer(true, false);
      }
      gui->EndDraw();
 +#ifdef __IOS__
 +    SohIos_SpkMark(2);
 +#endif
+     sPrevSubFrameNs = sLastSubFrameNs;
      sLastSubFrameNs = NsSince(runT0);
  }
- 
-@@ -168,6 +182,9 @@
-     interpreter->EndFrame();
+@@ -177,6 +191,9 @@
+     sLastPresentNs = OS_SteadyNs();
      CALL_EVENT(FrameDrawEnd);
      interpreter->mInterpolationIndex++;
 +#ifdef __IOS__
@@ -695,7 +695,7 @@ scripts/lh_genlib.py against each file's state just before this patch.
  }
  } // namespace
  
-@@ -178,7 +195,14 @@
+@@ -187,7 +204,14 @@
          return;
      }
      auto interpreter = wnd->GetInterpreterWeak().lock().get();
@@ -710,7 +710,7 @@ scripts/lh_genlib.py against each file's state just before this patch.
      interpreter->mInterpolationIndex = 0;
      auto wndBase = Ship::Context::GetRawInstance()->GetWindow();
      Nametag::SetSubframeBlend(1.0f);
-@@ -187,6 +211,9 @@
+@@ -196,6 +220,9 @@
          PresentSubframe(interpreter);
      }
      SyncAltAssets();
@@ -720,7 +720,7 @@ scripts/lh_genlib.py against each file's state just before this patch.
  }
  
  int GameEngine::CurrentViPerTick() {
-@@ -306,7 +333,14 @@
+@@ -315,7 +342,14 @@
      }
      auto interpreter = wnd->GetInterpreterWeak().lock().get();
      auto wndBase = Ship::Context::GetRawInstance()->GetWindow();
@@ -735,7 +735,7 @@ scripts/lh_genlib.py against each file's state just before this patch.
      interpreter->mInterpolationIndex = 0;
      static std::unordered_map<Mtx*, MtxF> maps[2];
      Prefetcher& prefetcher = GetPrefetcher();
-@@ -372,6 +406,9 @@
+@@ -380,6 +414,9 @@
              break;
          }
      }
@@ -747,7 +747,7 @@ scripts/lh_genlib.py against each file's state just before this patch.
      }
 --- a/src/port/Game.cpp
 +++ b/src/port/Game.cpp
-@@ -346,6 +346,12 @@
+@@ -372,6 +372,12 @@
      (void)data;
      sFrameRendered = true;
  }
@@ -760,7 +760,7 @@ scripts/lh_genlib.py against each file's state just before this patch.
  
  void push_frame() {
      static int sTitleCounter = 0;
-@@ -492,14 +498,26 @@
+@@ -520,14 +526,26 @@
          port_noteMainLoopAlive();
          // Pump events every iteration: a task-starved pass must not starve
          // input and window messages.
@@ -787,7 +787,7 @@ scripts/lh_genlib.py against each file's state just before this patch.
          if (sHost != nullptr) {
              sHost->Poll();
              if (sParked.load() && sHost->WantsFrame() && OS_SpPeekPendingTask() == nullptr && !sReleaseDeferred) {
-@@ -516,7 +534,13 @@
+@@ -544,7 +562,13 @@
                  SDL_Delay(16);
                  continue;
              }

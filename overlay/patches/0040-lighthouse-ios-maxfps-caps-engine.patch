@@ -38,7 +38,7 @@ Match-count asserted against the pristine vendor state.
 
 --- a/src/port/Interpolation/FramePacing.cpp
 +++ b/src/port/Interpolation/FramePacing.cpp
-@@ -493,14 +493,34 @@
+@@ -496,14 +496,34 @@
  }
  
  uint32_t GameEngine::GetInterpolationFPS() {

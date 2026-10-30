@@ -14,7 +14,8 @@ info() { printf '\033[36m==>\033[0m %s\n' "$*"; }
 [ -d "$ROOT/vendor/Lighthouse/.git" ] || "$ROOT/scripts/bootstrap.sh"
 "$ROOT/scripts/apply-overlay.sh"
 [ -f "$PREFIX/lib/libvorbisfile.a" ] || LIGHTHOUSE_IOS_SDK=visionos "$ROOT/scripts/build-audio-deps-ios.sh"
-[ -f "$PORT_O2R" ] || die "missing $PORT_O2R — run scripts/build-oracle.sh (GeneratePortO2R)"
+[ -f "$PORT_O2R" ] || die "missing $PORT_O2R — run scripts/pack-port-o2r.py (builds it from vendor/)"
+python3 "$ROOT/scripts/pack-port-o2r.py" --check || die "stale $PORT_O2R — run scripts/pack-port-o2r.py"
 
 APP_PATH="$BUILD/Release-xros/Lighthouse.app"
 if [ -L "$APP_PATH" ]; then

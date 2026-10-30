@@ -63,7 +63,7 @@ just where the ROM lands in the shortcut's path.
 
 --- a/src/port/Extractor/ExtractFlow.cpp
 +++ b/src/port/Extractor/ExtractFlow.cpp
-@@ -399,6 +399,21 @@
+@@ -406,6 +406,21 @@
              case ES_EXTRACT_ARGS: {
                  romArchive = nullptr;
  #if !defined(__SWITCH__) && !defined(__WIIU__)
@@ -85,7 +85,7 @@ just where the ROM lands in the shortcut's path.
                  if (args.size() == 0) {
                      LighthouseGui::RegisterPopup(
                          "Run Lighthouse", "All files have been processed. Run Lighthouse?", "Yes", "No",
-@@ -512,7 +527,14 @@
+@@ -519,7 +534,14 @@
                                      break;
                                  }
                              }

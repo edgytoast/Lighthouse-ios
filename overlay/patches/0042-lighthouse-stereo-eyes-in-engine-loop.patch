@@ -38,6 +38,14 @@ another draw would not finish in time, measured from the last draw's cost)
 bounds the 3D pass the way the old sPassBudgetNs did -- fewer sub-frames in
 3D, the correct degradation.
 
+SINCE LIGHTHOUSE 1.2.2 (6bb61f2f "End timed passes at their tick's last
+present") the timed pass predicts each present's time from min(last two draw
+costs) and the previous present (sPrevSubFrameNs / sLastPresentNs, written by
+upstream's DrawSubframe / PresentSubframe). The 3D branch returns before
+those writes, so it performs them itself: sPrevSubFrameNs before
+sLastSubFrameNs, sLastPresentNs right after Soh3DPaceFrame(). Without them the
+3D pass would plan against a stale 2D present time and a zero draw cost.
+
 WHAT IS SKIPPED IN THE 3D BRANCH, and why:
 * `gui->StartDraw()` / `gui->EndDraw()` -- StartDraw's ImGui NewFrame acquires
   the SCREEN drawable, and the 2D window is parked and hidden, so that acquire
@@ -79,7 +87,7 @@ list. Per program D-041 the menu is display-only in 3D.
  extern "C" void port_releaseRcpTask(void);
  
  namespace {
-@@ -50,6 +67,78 @@
+@@ -52,6 +69,82 @@
      auto runT0 = Clock::now();
      auto gui = wndBase->GetGui();
      wndBase->GetMouseStateManager()->StartFrame();
@@ -141,6 +149,10 @@ list. Per program D-041 the menu is display-only in 3D.
 +        if (lhMenuData != nullptr) {
 +            gui->Soh3DFinishMenuFrame();
 +        }
++        // Lighthouse 1.2.2 (6bb61f2f): the timed pass plans each present from
++        // the two latest draw costs and the last present's time; keep both
++        // fed in 3D exactly as upstream's 2D DrawSubframe/PresentSubframe do.
++        sPrevSubFrameNs = sLastSubFrameNs;
 +        sLastSubFrameNs = NsSince(runT0);
 +        // NO Soh3DSetEye(0) here: resetting per frame flaps
 +        // mCurDimensions between the eye and 2D sizes, and the
@@ -158,7 +170,7 @@ list. Per program D-041 the menu is display-only in 3D.
      gui->StartDraw();
      interpreter->StartFrame();
      interpreter->Run(commands, replacements);
-@@ -64,6 +153,18 @@
+@@ -67,6 +160,19 @@
  }
  
  void PresentSubframe(Fast::Interpreter* interpreter) {
@@ -169,11 +181,12 @@ list. Per program D-041 the menu is display-only in 3D.
 +        // manager's swap pair alone so the frame-rate limiter still sleeps.
 +        sLh3DDrawn = false;
 +        interpreter->Soh3DPaceFrame();
++        sLastPresentNs = OS_SteadyNs(); // 1.2.2: the pass's present clock
 +        CALL_EVENT(FrameDrawEnd);
 +        interpreter->mInterpolationIndex++;
 +        return;
 +    }
 +#endif
      interpreter->EndFrame();
+     sLastPresentNs = OS_SteadyNs();
      CALL_EVENT(FrameDrawEnd);
-     interpreter->mInterpolationIndex++;

@@ -15,7 +15,7 @@ guard (fewer build-configuration-dependent code paths to reason about).
 
 --- a/libultraship/src/fast/backends/gfx_metal.cpp
 +++ b/libultraship/src/fast/backends/gfx_metal.cpp
-@@ -700,6 +700,16 @@
+@@ -745,6 +745,16 @@
      NS::AutoreleasePool* autorelease_pool = NS::AutoreleasePool::alloc()->init();
  
      tex.texture = mCurrentDrawable->texture();

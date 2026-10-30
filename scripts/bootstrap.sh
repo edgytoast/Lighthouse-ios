@@ -5,9 +5,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENDOR="$ROOT/vendor/Lighthouse"
 
 LH_REPO="https://github.com/HarbourMasters/Lighthouse.git"
-LH_PIN="29b5fdb76d208b127f1b23089d1b23b63987af50"
-LUS_PIN="da6daf1a50a5e46d6641408d52227e31e85e46df"
-TORCH_PIN="c63fa0780a16642d73b7710b89e10f7c4ba0c332"
+LH_PIN="bdb8cd9cc7d499405441d07109c020c7543f813b"
+LUS_PIN="e175b95944fd41003246edaaef27c9b46b5e6fb2"
+TORCH_PIN="7f5d55f9de53f96e61c11399cb3066f8dd8e835e"
 
 die() { printf '\033[31mFATAL:\033[0m %s\n' "$*" >&2; exit 1; }
 info() { printf '\033[36m==>\033[0m %s\n' "$*"; }
@@ -21,6 +21,7 @@ fi
 info "Pinning to D0 commits"
 git -C "$VENDOR" fetch --all --tags --quiet
 git -C "$VENDOR" checkout --quiet "$LH_PIN"
+git -C "$VENDOR" submodule sync --recursive --quiet
 git -C "$VENDOR" submodule update --init --recursive --quiet
 
 assert_pin() {

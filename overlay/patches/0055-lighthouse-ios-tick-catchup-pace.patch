@@ -210,7 +210,7 @@ regenerates byte-identically from a pristine or a fully patched tree.
 +#endif
 --- a/src/port/Interpolation/FramePacing.cpp
 +++ b/src/port/Interpolation/FramePacing.cpp
-@@ -219,11 +219,19 @@
+@@ -228,11 +228,19 @@
  bool GameEngine::WantsTimedPass(bool recorded, int viPerTick) {
      return recorded && !GfxDebuggerIsDebugging() && (int)GetInterpolationFPS() > 60 / viPerTick;
  }

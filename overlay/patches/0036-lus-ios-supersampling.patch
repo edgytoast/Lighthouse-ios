@@ -19,7 +19,7 @@ SohIos_DrawablePixelWidth. __IOS__-only; macOS build pristine.
 
 --- a/libultraship/src/fast/interpreter.cpp
 +++ b/libultraship/src/fast/interpreter.cpp
-@@ -5050,6 +5050,12 @@
+@@ -5423,6 +5423,12 @@
      return false;
  #endif
  }
@@ -32,7 +32,7 @@ SohIos_DrawablePixelWidth. __IOS__-only; macOS build pristine.
  
  void Interpreter::StartFrame() {
      mWapi->GetDimensions(&mGfxCurrentWindowDimensions.width, &mGfxCurrentWindowDimensions.height, &mCurWindowPosX,
-@@ -5058,6 +5064,35 @@
+@@ -5431,6 +5437,35 @@
          // Avoid division by zero
          mCurDimensions.height = 1;
      }

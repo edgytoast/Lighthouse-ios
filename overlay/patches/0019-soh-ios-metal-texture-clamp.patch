@@ -34,19 +34,32 @@ EndFrame encodes ONE generateMipmaps blit pass on the frame's own command
 buffer after its render encoding ends. Mips become valid next frame; the
 one frame that samples fresh uploads pre-mips is a load transition.
 Ledger sites are mip-aware (a full chain is +1/3 of the base level).
+rev6 (LUS e175b959 "fast3d: draw N64 mipmaps", Lighthouse 1.2.2): upstream
+now uploads N64 mip chains itself through a new UploadTextureMip (explicit
+levels decoded from TMEM, skipped for HD-replaced loads) and made
+UploadTexture recreate any texture whose mipmapLevelCount() != 1. That
+recreate test would release and re-create every 0019 mip-chain texture on
+every upload, so the reuse test now compares the live level count with the
+DESCRIPTOR's (1 for small textures, the full chain for >=256 ones) — same
+behaviour for upstream's single-level case, no churn for ours. The new
+UploadTextureMip gets the same byte ledger as UploadTexture (subtract on
+release, add on create, same mip-aware formula) so 0020's budget stays
+exact when a texture id moves between the two paths. Upstream's explicit
+chains are never put on the pending-mips list: no double generation.
+UploadTextureMip already nil-checks newTexture; no clamp there (it only
+sees non-replaced N64 TMEM data, far below the device limit).
 
 --- a/libultraship/src/fast/backends/gfx_metal.cpp
 +++ b/libultraship/src/fast/backends/gfx_metal.cpp
-@@ -339,20 +339,60 @@
-     mCurrentTile = tile;
+@@ -343,19 +343,59 @@
      mCurrentTextureIds[tile] = texture_id;
  }
-+
+ 
 +// SOH_IOS (overlay 0019 rev4): textures awaiting a mip-chain build in
 +// EndFrame's single blit pass. Entries are retained on push — the 0020
 +// byte-budget cache may evict (release) a texture before the frame ends.
 +static std::vector<MTL::Texture*> sSohIosPendingMips;
- 
++
 +// SOH_IOS (overlay 0019 rev5): per-frame upload ledger — the HD-pack stutter
 +// hunt (recurring ~185 ms engine stalls with no log correlate) needs to see
 +// texture-upload bursts. Frame counters reset in EndFrame; window totals are
@@ -101,14 +114,17 @@ Ledger sites are mip-aware (a full chain is +1/3 of the base level).
      texture_descriptor->setSampleCount(1);
      texture_descriptor->setStorageMode(MTL::StorageModeShared);
  
-@@ -360,18 +400,61 @@
+@@ -363,18 +403,64 @@
  
      MTL::Texture* texture = texture_data->texture;
      if (texture_data->texture == nullptr || texture_data->texture->width() != width ||
--        texture_data->texture->height() != height) {
+-        texture_data->texture->height() != height || texture_data->texture->mipmapLevelCount() != 1) {
 -        if (texture_data->texture != nullptr)
 +        texture_data->texture->height() != height ||
-+        (sohIosWantMips && texture_data->texture->mipmapLevelCount() <= 1)) {
++        // SOH_IOS (overlay 0019 rev6): upstream recreates whenever the level
++        // count != 1; compare against the descriptor so our full chains are
++        // reused instead of rebuilt on every upload.
++        texture_data->texture->mipmapLevelCount() != texture_descriptor->mipmapLevelCount()) {
 +        if (texture_data->texture != nullptr) {
 +            // SOH_IOS (overlay 0019 rev2): keep the GPU byte ledger exact
 +            // (rev4: a mip chain adds one third over the base level).
@@ -166,11 +182,42 @@ Ledger sites are mip-aware (a full chain is +1/3 of the base level).
      autorelease_pool->release();
  }
  
-@@ -591,6 +674,39 @@
-     auto& screen_framebuffer = mFramebuffers[0];
+@@ -393,8 +479,16 @@
+ 
+         if (texture_data->texture == nullptr || texture_data->texture->width() != width ||
+             texture_data->texture->height() != height || texture_data->texture->mipmapLevelCount() != totalLevels) {
+-            if (texture_data->texture != nullptr)
++            if (texture_data->texture != nullptr) {
++                // SOH_IOS (overlay 0019 rev6): same byte ledger as UploadTexture.
++                size_t sohIosOldBytes =
++                    (size_t)texture_data->texture->width() * texture_data->texture->height() * 4;
++                if (texture_data->texture->mipmapLevelCount() > 1) {
++                    sohIosOldBytes += sohIosOldBytes / 3;
++                }
++                mTextureBytes -= sohIosOldBytes;
+                 texture_data->texture->release();
++            }
+ 
+             MTL::TextureDescriptor* texture_descriptor =
+                 MTL::TextureDescriptor::texture2DDescriptor(MTL::PixelFormatRGBA8Unorm, width, height, true);
+@@ -403,6 +497,13 @@
+             texture_descriptor->setSampleCount(1);
+             texture_descriptor->setStorageMode(MTL::StorageModeShared);
+             texture_data->texture = mDevice->newTexture(texture_descriptor);
++            if (texture_data->texture != nullptr) {
++                size_t sohIosNewBytes = (size_t)width * height * 4;
++                if (texture_data->texture->mipmapLevelCount() > 1) {
++                    sohIosNewBytes += sohIosNewBytes / 3;
++                }
++                mTextureBytes += sohIosNewBytes;
++            }
+         }
+     }
+ 
+@@ -637,6 +738,39 @@
      if (!screen_framebuffer.mHasEndedEncoding)
          screen_framebuffer.mCommandEncoder->endEncoding();
-+
+ 
 +    // SOH_IOS (overlay 0019 rev4): build mip chains for this frame's uploads in
 +    // ONE blit pass on the frame's own command buffer (see UploadTexture for
 +    // why per-upload command buffers deadlock). The command buffer retains
@@ -203,6 +250,7 @@ Ledger sites are mip-aware (a full chain is +1/3 of the base level).
 +    sSohIosFrameUpCount = 0;
 +    sSohIosFrameUpMaxW = 0;
 +    sSohIosFrameUpMaxH = 0;
- 
++
      // Deferred screen FB readback: blit the rendered texture into a shared
      // MTLBuffer using a blit encoder (cheap DMA — no render pass boundary,
+     // no TBDR tile flush/reload).  The CPU reads this buffer next frame in

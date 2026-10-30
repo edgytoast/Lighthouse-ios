@@ -48,7 +48,7 @@ Match-count asserted against the pristine vendor state.
 
 --- a/src/port/Interpolation/FramePacing.cpp
 +++ b/src/port/Interpolation/FramePacing.cpp
-@@ -269,7 +269,201 @@
+@@ -272,7 +272,201 @@
      SyncAltAssets();
  }
  } // namespace
@@ -250,7 +250,7 @@ Match-count asserted against the pristine vendor state.
  void GameEngine::ProcessGfxCommands(Gfx* commands) {
      auto wnd = std::dynamic_pointer_cast<Fast::Fast3dWindow>(Ship::Context::GetRawInstance()->GetWindow());
  
-@@ -281,6 +475,9 @@
+@@ -284,6 +478,9 @@
      //     wnd->EnableSRGBMode();
      // }
      wnd->SetRendererUCode(UcodeHandlers::ucode_f3dex);

@@ -12,7 +12,7 @@ __IOS__-only; the macOS build keeps the pristine synchronous path.
 
 --- a/libultraship/src/fast/backends/gfx_metal.cpp
 +++ b/libultraship/src/fast/backends/gfx_metal.cpp
-@@ -214,6 +214,28 @@
+@@ -217,6 +217,28 @@
      }
  }
  
@@ -41,7 +41,7 @@ __IOS__-only; the macOS build keeps the pristine synchronous path.
  struct ShaderProgram* GfxRenderingAPIMetal::CreateAndLoadNewShader(uint64_t shader_id0, uint64_t shader_id1) {
      CCFeatures cc_features;
      gfx_cc_get_features(shader_id0, shader_id1, &cc_features);
-@@ -225,6 +247,107 @@
+@@ -228,6 +250,107 @@
      MTL::VertexDescriptor* vertex_descriptor =
          gfx_metal_build_shader(buf, numFloats, cc_features, mCurrentFilterMode == FILTER_THREE_POINT);
  
@@ -149,7 +149,7 @@ __IOS__-only; the macOS build keeps the pristine synchronous path.
      NS::Error* error = nullptr;
      MTL::Library* library =
          mDevice->newLibrary(NS::String::string(buf.data(), NS::UTF8StringEncoding), nullptr, &error);
-@@ -300,6 +423,7 @@
+@@ -303,6 +426,7 @@
      autorelease_pool->release();
  
      return (struct ShaderProgram*)prg;
@@ -157,7 +157,7 @@ __IOS__-only; the macOS build keeps the pristine synchronous path.
  }
  
  struct ShaderProgram* GfxRenderingAPIMetal::LookupShader(uint64_t shader_id0, uint64_t shader_id1) {
-@@ -539,10 +663,21 @@
+@@ -584,10 +708,21 @@
      }
  
      if (current_framebuffer.mLastShaderProgram != mShaderProgram) {

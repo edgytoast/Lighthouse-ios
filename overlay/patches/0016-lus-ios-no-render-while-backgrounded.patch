@@ -12,7 +12,7 @@ SetupScreenFramebuffer, disjoint from 0010's NewFrame hunk (D6).
 
 --- a/libultraship/src/fast/backends/gfx_metal.cpp
 +++ b/libultraship/src/fast/backends/gfx_metal.cpp
-@@ -688,9 +688,40 @@
+@@ -733,9 +733,40 @@
      return (int)index;
  }
  

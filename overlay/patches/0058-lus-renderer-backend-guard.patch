@@ -39,7 +39,7 @@ patch (no earlier overlay patch touches it).
  }
  
  Fast3dWindow::Fast3dWindow(std::shared_ptr<Ship::Gui> gui)
-@@ -134,7 +140,13 @@
+@@ -135,7 +141,13 @@
  }
  
  void Fast3dWindow::InitWindowManager() {
@@ -53,7 +53,7 @@ patch (no earlier overlay patch touches it).
  
      switch (GetWindowBackend()) {
  #ifdef ENABLE_DX11
-@@ -157,6 +169,14 @@
+@@ -158,6 +170,14 @@
  #endif
          default:
              SPDLOG_ERROR("Could not load the correct rendering backend");

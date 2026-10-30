@@ -189,7 +189,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  void Metrics_DrawTabBar() {
 --- a/src/port/UI/DeveloperTools/GameplayTools.cpp
 +++ b/src/port/UI/DeveloperTools/GameplayTools.cpp
-@@ -425,8 +425,9 @@
+@@ -433,8 +433,9 @@
              }
              ImGui::EndTable();
          }
@@ -202,7 +202,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  void GameplayTools_DrawTabBar() {
 --- a/src/port/UI/DeveloperTools/SaveEditor.cpp
 +++ b/src/port/UI/DeveloperTools/SaveEditor.cpp
-@@ -196,8 +196,9 @@
+@@ -204,8 +204,9 @@
              ImGui::EndTable();
          }
  
@@ -213,7 +213,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  }
  
  void SaveEditor_DrawGeneralTab() {
-@@ -297,8 +298,9 @@
+@@ -309,8 +310,9 @@
              ImGui::PopID();
          }
  
@@ -225,7 +225,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  }
  
  void SaveEditor_DrawProgressTab() {
-@@ -418,8 +420,9 @@
+@@ -447,8 +449,9 @@
          }
          ImGui::PopStyleVar(1);
  
@@ -236,7 +236,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  }
  
  void DrawRandoFlagEditor() {
-@@ -437,8 +440,9 @@
+@@ -467,8 +470,9 @@
              }
              ImGui::PopID();
          }
@@ -247,7 +247,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  }
  
  void DrawRandoCheckEditor() {
-@@ -534,8 +538,9 @@
+@@ -575,8 +579,9 @@
                  }
                  ImGui::EndTable();
              }
@@ -273,7 +273,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  void DrawPlayerTools() {
 --- a/src/port/UI/LighthouseModMenuWindow.cpp
 +++ b/src/port/UI/LighthouseModMenuWindow.cpp
-@@ -616,16 +616,18 @@
+@@ -615,16 +615,18 @@
          if (ImGui::BeginChild("Enabled Mods", ImVec2(0, -8))) {
              DrawMods(true, shown, alphabetical);
  
